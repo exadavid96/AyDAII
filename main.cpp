@@ -3,7 +3,7 @@
 #include "GrafoNDirigido.h"
 #include <list>
 #include <queue>
-#include <utility>
+#include "UNIONFIND.h"
 
 
 
@@ -71,6 +71,14 @@ list<int> bosqueSortTopologico (GrafoDirigido grafoD);
 //Puntos de Articulación
 void DFS_preOrdenGND (GrafoNDirigido grafoN , int fuente, char estado[] , int * preOrden , int * masAlto, int & num);
 void puntosArticulacion(GrafoNDirigido grafoN, int i);
+
+//Componentes Fuertemente Conectadas
+list< list<int> > componentesFC (GrafoDirigido grafoD);
+void DFS_CFC ( GrafoDirigido grafoD , int fuente , char estado[] , list<int> & verticesPostOrden , GrafoDirigido & grafoDR);
+
+//Componentes Conexas
+list< list<int> > componentesConexas (GrafoNDirigido grafoN);
+void DFS_CC ( GrafoNDirigido grafoN , int fuente , list<int> & componente , char estado[]);
 
 
 int main() {
@@ -221,7 +229,35 @@ int main() {
 
     ///////////////////////////////Puntos de Articulación///////////////////////////////////
 
-    puntosArticulacion(grafoN, 4);
+    //puntosArticulacion(grafoN, 4);
+
+    ///////////////////////////////Componentes Fuertemente Conectadas///////////////////////////////////
+
+    /*list< list<int> > lComponentes = componentesFC(grafoD);
+
+    list< list<int> >::const_iterator itCompS ;
+    for (itCompS = lComponentes.cbegin() ; itCompS != lComponentes.cend() ; itCompS++){
+        list<int>::const_iterator itComp;
+        for(itComp = (*itCompS).cbegin() ; itComp != (*itCompS).cend() ; itComp++)
+            cout<< *itComp <<"-";
+        cout<<"........................."<<endl;
+    }
+    */
+
+    ///////////////////////////////Componentes Conexas - DFS ///////////////////////////////////
+
+    /*list< list<int> > lcompConexas = componentesConexas(grafoN);
+    list< list<int> >::const_iterator itCompS ;
+    for (itCompS = lcompConexas.cbegin() ; itCompS != lcompConexas.cend() ; itCompS++){
+        list<int>::const_iterator itComp;
+        for(itComp = (*itCompS).cbegin() ; itComp != (*itCompS).cend() ; itComp++)
+            cout<< *itComp <<"-";
+        cout<<"........................."<<endl;
+    }
+     */
+
+
+
 
 
     return 0;
@@ -702,6 +738,119 @@ void puntosArticulacion(GrafoNDirigido grafoN , int fuente){
         if (esPtoArticulacion(grafoN,masAlto,preOrden,i))
             cout<<"El vertice "<< i << "es un punto de articulacion"<<endl;
 }
+
+void DFS_CFC ( GrafoDirigido grafoD , int fuente , char estado[] , list<int> & verticesPostOrden , GrafoDirigido & grafoDR){
+
+    estado[fuente] = 'V';
+    list<GrafoDirigido::Nodo> ady = grafoD.adyacentes(fuente);
+    list<GrafoDirigido::Nodo>::const_iterator itAdy;
+    for(itAdy = ady.cbegin(); itAdy != ady.cend(); itAdy++){
+        grafoDR.agregarArco(itAdy->vertice,fuente,0);
+        if(estado[itAdy->vertice] != 'V')
+            DFS_CFC(grafoD,itAdy->vertice,estado,verticesPostOrden,grafoDR);
+    }
+
+    verticesPostOrden.push_front(fuente);
+
+
+}
+
+bool estaEnLista ( list<int> verticesPostOrden , int vertice ){
+
+    list<int>::const_iterator it;
+    for(it=verticesPostOrden.cbegin(); it!=verticesPostOrden.cend(); it++)
+        if(*it == vertice)
+            return true;
+    return false;
+
+}
+
+void sacarVertice ( list<int> & verticesPostOrden , int vertice){
+    bool continuar = true;
+    list<int>::const_iterator it = verticesPostOrden.cbegin();
+    while (continuar)
+        if(*it == vertice){
+            verticesPostOrden.erase(it);
+            continuar = false;
+        }
+        else
+            it++;
+}
+
+void DFS_GR (GrafoDirigido grafoDR , int fuente , list<int> & verticesPostOrden , list<int> & componente){
+
+    componente.push_back( fuente);
+    sacarVertice(verticesPostOrden,fuente);
+    list<GrafoDirigido::Nodo> ady = grafoDR.adyacentes(fuente);
+    list<GrafoDirigido::Nodo>::const_iterator itAdy;
+    for(itAdy = ady.cbegin(); itAdy != ady.cend(); itAdy++)
+        if(estaEnLista(verticesPostOrden,itAdy->vertice))
+            DFS_GR(grafoDR,itAdy->vertice,verticesPostOrden,componente);
+
+}
+
+
+list< list<int> > componentesFC (GrafoDirigido grafoD){
+    list< list<int> > componentes;
+    int n = grafoD.cantVertices();
+    GrafoDirigido grafoReverso;
+    char estado[n];
+    for(int i = 0 ; i < n; i++){
+        grafoReverso.agregarVertice();
+        estado[i] = 'N';
+    }
+    list<int> verticesPostOrden;
+    for(int i = 0; i < n; i++)
+        if (estado[i] != 'V')
+            DFS_CFC(grafoD,i,estado,verticesPostOrden,grafoReverso);
+    list<int>::const_iterator it = verticesPostOrden.cbegin();
+    while (!verticesPostOrden.empty()){
+        cout<<verticesPostOrden.size()<<endl;
+        list<int>::const_iterator first = verticesPostOrden.cbegin();
+        if(estaEnLista(verticesPostOrden,*first)){
+            list<int> componente;
+            DFS_GR(grafoReverso,*first,verticesPostOrden,componente);
+            componentes.push_back(componente);
+        }
+    }
+    return componentes;
+
+}
+
+void DFS_CC ( GrafoNDirigido grafoN , int fuente , list<int> & componente , char estado[]){
+
+    estado[fuente] = 'V';
+    componente.push_back(fuente);
+    list<int> ady = grafoN.adyacentes(fuente);
+    list<int>::const_iterator itAdy;
+    for(itAdy = ady.cbegin() ; itAdy != ady.cend() ; itAdy++)
+        if(estado[*itAdy] != 'V')
+            DFS_CC(grafoN,*itAdy,componente,estado);
+}
+
+list< list<int> > componentesConexas (GrafoNDirigido grafoN){
+
+    int n = grafoN.cantVertices();
+    list< list <int> > componentes;
+    char estado[n];
+    for (int i = 0; i < n ; i++)
+        estado[i] = 'N';
+
+    for (int i = 0; i < n ; i++)
+        if(estado[i] != 'V'){
+            list<int> componente;
+            DFS_CC(grafoN,i,componente,estado);
+            componentes.push_back(componente);
+        }
+
+    return componentes;
+
+}
+
+
+
+
+
 
 
 
