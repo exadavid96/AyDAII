@@ -13,7 +13,18 @@ UNIONFIND::UNIONFIND(int tamanio) {
 }
 
 void UNIONFIND::unir(int i, int j) {
-    this->p[i] = j;
+    //this->p[i] = j; Versión Original
+
+    int cantHijos = p[i] + p[j] ;
+    if (this->p[i] > this->p[j]){
+        this->p[i] = j;
+        this->p[j] = cantHijos;
+    }
+    else{
+        this->p[j] = i;
+        this->p[i] = cantHijos;
+    }
+
 }
 
 int UNIONFIND::buscar(int i) const {

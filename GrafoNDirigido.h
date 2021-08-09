@@ -11,11 +11,14 @@ class GrafoNDirigido{
         int cantVertices() const;
         bool existeArista( int origen , int destino) const;
         list<int> adyacentes(int vertice) const;
+        int costo (int origen , int destino) const;
+        list < pair<int,int> >  aristasGrafo() const;
         virtual ~ GrafoNDirigido();
 
     private:
         const int MAX_VERTICES = 100;
         int ** matriz;
+        list < pair<int,int> > listArcos;
         int numVertices;
 
 };
